@@ -147,30 +147,48 @@ function distanceNM(lat1, lon1, lat2, lon2) {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
 
-// ── AIS Data Fetch via AISStream.io ──────────────────────────────
-/**
- * AISStream.io — free WebSocket AIS feed, no AIS station needed.
- * API key stored in GitHub Secrets as AISSTREAM_KEY.
- * Subscribes to vessel position messages in the Gulf of Oman zone.
- * Collects data for 15 seconds then closes the connection.
- */
+// ── AIS Data Fetch — Multi-source with fallbacks ─────────────────
 const AISSTREAM_KEY = process.env.AISSTREAM_KEY;
 
 async function fetchVessels() {
+  console.log("[ARB] Trying source 1: AISStream.io WebSocket...");
+  const streamVessels = await tryAISStream();
+  if (streamVessels.length > 0) {
+    console.log(`[ARB] AISStream returned ${streamVessels.length} vessels`);
+    return streamVessels;
+  }
+
+  console.log("[ARB] Trying source 2: MyShipTracking public API...");
+  const mstVessels = await tryMyShipTracking();
+  if (mstVessels.length > 0) {
+    console.log(`[ARB] MyShipTracking returned ${mstVessels.length} vessels`);
+    return mstVessels;
+  }
+
+  console.log("[ARB] Trying source 3: MarineTraffic tile data...");
+  const mtVessels = await tryMarineTraffic();
+  if (mtVessels.length > 0) {
+    console.log(`[ARB] MarineTraffic returned ${mtVessels.length} vessels`);
+    return mtVessels;
+  }
+
+  console.warn("[ARB] All sources failed. No vessel data available this scan.");
+  return [];
+}
+
+async function tryAISStream() {
   return new Promise((resolve) => {
     const vessels = new Map();
     const timeout = setTimeout(() => {
-      ws.close();
+      try { ws.close(); } catch(e) {}
       resolve(Array.from(vessels.values()));
-    }, 15000); // collect for 15 seconds
+    }, 15000);
 
     let ws;
     try {
       const { WebSocket } = require("ws");
       ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
-
       ws.on("open", () => {
-        console.log("[ARB] Connected to AISStream.io");
         ws.send(JSON.stringify({
           APIKey: AISSTREAM_KEY,
           BoundingBoxes: [[
@@ -180,12 +198,11 @@ async function fetchVessels() {
           FilterMessageTypes: ["PositionReport"],
         }));
       });
-
       ws.on("message", (data) => {
         try {
           const msg = JSON.parse(data.toString());
           if (msg.MessageType !== "PositionReport") return;
-          const p   = msg.Message?.PositionReport;
+          const p = msg.Message?.PositionReport;
           const meta = msg.MetaData;
           if (!p || !meta) return;
           vessels.set(meta.MMSI, {
@@ -197,29 +214,93 @@ async function fetchVessels() {
             course: parseFloat(p.TrueHeading || p.Cog) || 0,
             speed:  parseFloat(p.Sog) || 0,
             type:   "Cargo",
-            flag:   meta.flag || "",
+            flag:   "",
           });
         } catch(e) {}
       });
-
-      ws.on("error", (err) => {
-        console.warn("[ARB] AISStream error:", err.message);
-        clearTimeout(timeout);
-        ws.close();
-        resolve(Array.from(vessels.values()));
-      });
-
-      ws.on("close", () => {
-        clearTimeout(timeout);
-        resolve(Array.from(vessels.values()));
-      });
-
-    } catch(err) {
-      console.warn("[ARB] WebSocket setup failed:", err.message);
+      ws.on("error", () => { clearTimeout(timeout); resolve(Array.from(vessels.values())); });
+      ws.on("close", () => { clearTimeout(timeout); resolve(Array.from(vessels.values())); });
+    } catch(e) {
       clearTimeout(timeout);
       resolve([]);
     }
   });
+}
+
+async function tryMyShipTracking() {
+  try {
+    const url = `https://www.myshiptracking.com/requests/vesselsonmap.php?type=0&minlat=${MONITOR_ZONE.lat_min}&maxlat=${MONITOR_ZONE.lat_max}&minlon=${MONITOR_ZONE.lon_min}&maxlon=${MONITOR_ZONE.lon_max}&zoom=5&_=${Date.now()}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Referer": "https://www.myshiptracking.com/",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("Not an array");
+    return data
+      .filter(v => v && v.MMSI)
+      .map(v => ({
+        name:   String(v.SHIPNAME || v.NAME || "UNKNOWN").trim(),
+        mmsi:   String(v.MMSI || ""),
+        imo:    String(v.IMO || ""),
+        lat:    parseFloat(v.LAT || v.LATITUDE) || 0,
+        lon:    parseFloat(v.LON || v.LONGITUDE) || 0,
+        course: parseFloat(v.COG || v.COURSE) || 0,
+        speed:  parseFloat(v.SOG || v.SPEED) || 0,
+        type:   v.TYPE_NAME || "Cargo",
+        flag:   v.FLAG || "",
+      }))
+      .filter(v => v.speed > 0);
+  } catch(e) {
+    console.warn("[ARB] MyShipTracking failed:", e.message);
+    return [];
+  }
+}
+
+async function tryMarineTraffic() {
+  try {
+    // MarineTraffic tile-based public endpoint
+    const url = "https://www.marinetraffic.com/getData/get_data_json_4/z:5/X:42/Y:18/station:0";
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Referer": "https://www.marinetraffic.com/en/ais/home/centerx:50/centery:20/zoom:5",
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept": "application/json, text/javascript, */*",
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data?.data?.rows) throw new Error("No rows");
+    return data.data.rows
+      .filter(v => {
+        const lat = parseFloat(v.LAT);
+        const lon = parseFloat(v.LON);
+        return lat >= MONITOR_ZONE.lat_min && lat <= MONITOR_ZONE.lat_max &&
+               lon >= MONITOR_ZONE.lon_min && lon <= MONITOR_ZONE.lon_max;
+      })
+      .map(v => ({
+        name:   v.SHIPNAME || "UNKNOWN",
+        mmsi:   v.MMSI     || "",
+        imo:    v.IMO      || "",
+        lat:    parseFloat(v.LAT)    || 0,
+        lon:    parseFloat(v.LON)    || 0,
+        course: parseFloat(v.COURSE) || 0,
+        speed:  parseFloat(v.SPEED)  || 0,
+        type:   v.TYPE_NAME || "Cargo",
+        flag:   v.FLAG      || "",
+      }))
+      .filter(v => v.speed > 0);
+  } catch(e) {
+    console.warn("[ARB] MarineTraffic failed:", e.message);
+    return [];
+  }
 }
 
 function getVesselType(code) {
