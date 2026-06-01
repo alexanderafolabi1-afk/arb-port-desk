@@ -106,96 +106,79 @@ function distanceNM(lat1, lon1, lat2, lon2) {
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
 
-// ── AIS Data Fetch ────────────────────────────────────────────────
+// ── AIS Data Fetch via AISStream.io ──────────────────────────────
 /**
- * Uses VesselFinder free public API — no registration, no AIS station needed.
- * Fetches vessels in the Gulf of Oman monitoring zone.
- * Falls back to a secondary free source if VesselFinder is unavailable.
+ * AISStream.io — free WebSocket AIS feed, no AIS station needed.
+ * API key stored in GitHub Secrets as AISSTREAM_KEY.
+ * Subscribes to vessel position messages in the Gulf of Oman zone.
+ * Collects data for 15 seconds then closes the connection.
  */
+const AISSTREAM_KEY = process.env.AISSTREAM_KEY;
+
 async function fetchVessels() {
-  // Primary: VesselFinder free area search
-  // Returns vessels within our Gulf of Oman monitoring zone
-  const url = `https://www.vesselfinder.com/api/pub/vesselsonmap?bbox=${MONITOR_ZONE.lon_min},${MONITOR_ZONE.lat_min},${MONITOR_ZONE.lon_max},${MONITOR_ZONE.lat_max}&zoom=7`;
+  return new Promise((resolve) => {
+    const vessels = new Map();
+    const timeout = setTimeout(() => {
+      ws.close();
+      resolve(Array.from(vessels.values()));
+    }, 15000); // collect for 15 seconds
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Referer": "https://www.vesselfinder.com/",
-      },
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!res.ok) throw new Error(`VesselFinder HTTP ${res.status}`);
-    const data = await res.json();
-
-    // VesselFinder returns array of vessel arrays
-    // Format: [mmsi, lat*600000, lon*600000, course, speed, name, type, ...]
-    if (Array.isArray(data)) {
-      return data
-        .filter(v => Array.isArray(v) && v.length >= 6)
-        .map(v => ({
-          name:   String(v[5] || "UNKNOWN").trim(),
-          mmsi:   String(v[0] || ""),
-          imo:    "",
-          lat:    parseFloat(v[1]) / 600000,
-          lon:    parseFloat(v[2]) / 600000,
-          course: parseFloat(v[3]) || 0,
-          speed:  parseFloat(v[4]) / 10,
-          type:   getVesselType(v[6]),
-          flag:   "",
-        }))
-        .filter(v => v.name !== "UNKNOWN" && v.speed > 0);
-    }
-    throw new Error("Unexpected VesselFinder response format");
-
-  } catch(err) {
-    console.warn("[ARB] VesselFinder fetch failed:", err.message);
-
-    // Secondary: try MarineTraffic public endpoint
+    let ws;
     try {
-      const url2 = `https://www.marinetraffic.com/getData/get_data_json_4/z:8/X:48/Y:23/station:0`;
-      const res2 = await fetch(url2, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          "Referer": "https://www.marinetraffic.com/",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!res2.ok) throw new Error(`MarineTraffic HTTP ${res2.status}`);
-      const data2 = await res2.json();
-      if (data2.data && Array.isArray(data2.data.rows)) {
-        return data2.data.rows
-          .filter(v => {
-            const lat = parseFloat(v.LAT);
-            const lon = parseFloat(v.LON);
-            return lat >= MONITOR_ZONE.lat_min && lat <= MONITOR_ZONE.lat_max &&
-                   lon >= MONITOR_ZONE.lon_min && lon <= MONITOR_ZONE.lon_max;
-          })
-          .map(v => ({
-            name:   v.SHIPNAME || "UNKNOWN",
-            mmsi:   v.MMSI     || "",
-            imo:    v.IMO      || "",
-            lat:    parseFloat(v.LAT)   || 0,
-            lon:    parseFloat(v.LON)   || 0,
-            course: parseFloat(v.COURSE)|| 0,
-            speed:  parseFloat(v.SPEED) || 0,
-            type:   v.TYPE_NAME || "Cargo",
-            flag:   v.FLAG     || "",
-          }));
-      }
-      throw new Error("No rows in MarineTraffic response");
+      const { WebSocket } = require("ws");
+      ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
 
-    } catch(err2) {
-      console.warn("[ARB] MarineTraffic also failed:", err2.message, "— pipeline test mode active");
-      // Test mode — confirms email pipeline is working
-      // Real vessel data will flow once live AIS sources respond
-      return [
-        { name:"TEST VESSEL ONLY",  mmsi:"000000001", imo:"0000001", lat:24.2, lon:57.8, course:145, speed:12.4, type:"Cargo",  flag:"Test" },
-      ];
+      ws.on("open", () => {
+        console.log("[ARB] Connected to AISStream.io");
+        ws.send(JSON.stringify({
+          APIKey: AISSTREAM_KEY,
+          BoundingBoxes: [[
+            [MONITOR_ZONE.lat_min, MONITOR_ZONE.lon_min],
+            [MONITOR_ZONE.lat_max, MONITOR_ZONE.lon_max],
+          ]],
+          FilterMessageTypes: ["PositionReport"],
+        }));
+      });
+
+      ws.on("message", (data) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.MessageType !== "PositionReport") return;
+          const p   = msg.Message?.PositionReport;
+          const meta = msg.MetaData;
+          if (!p || !meta) return;
+          vessels.set(meta.MMSI, {
+            name:   meta.ShipName?.trim() || "UNKNOWN",
+            mmsi:   String(meta.MMSI || ""),
+            imo:    "",
+            lat:    parseFloat(p.Latitude)  || 0,
+            lon:    parseFloat(p.Longitude) || 0,
+            course: parseFloat(p.TrueHeading || p.Cog) || 0,
+            speed:  parseFloat(p.Sog) || 0,
+            type:   "Cargo",
+            flag:   meta.flag || "",
+          });
+        } catch(e) {}
+      });
+
+      ws.on("error", (err) => {
+        console.warn("[ARB] AISStream error:", err.message);
+        clearTimeout(timeout);
+        ws.close();
+        resolve(Array.from(vessels.values()));
+      });
+
+      ws.on("close", () => {
+        clearTimeout(timeout);
+        resolve(Array.from(vessels.values()));
+      });
+
+    } catch(err) {
+      console.warn("[ARB] WebSocket setup failed:", err.message);
+      clearTimeout(timeout);
+      resolve([]);
     }
-  }
+  });
 }
 
 function getVesselType(code) {
