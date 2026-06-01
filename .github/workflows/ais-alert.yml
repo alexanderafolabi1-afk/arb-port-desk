@@ -1,33 +1,34 @@
 name: ARB Vessel Diversion Monitor
 
 on:
- schedule:
-   - cron: '0 * * * *'
- workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 permissions:
- contents: read
+  contents: read
 
 jobs:
- vessel-scan:
-   name: Scan AIS & Send Vessel Diversion Alerts
-   runs-on: ubuntu-latest
+  vessel-scan:
+    name: Scan AIS & Send Vessel Diversion Alerts
+    runs-on: ubuntu-latest
 
-   steps:
-     - name: Checkout repository
-       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-     - name: Set up Node.js
-       uses: actions/setup-node@v4
-       with:
-         node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-     - name: Install dependencies
-       run: npm install
+      - name: Install dependencies
+        run: npm install
 
-     - name: Run vessel diversion scan & send alerts
-       run: node ais-monitor.js
-       env:
-         ZOHO_USER:     ${{ secrets.ZOHO_USER }}
-         ZOHO_PASS:     ${{ secrets.ZOHO_PASS }}
-         ALERT_EMAIL:   ${{ secrets.ALERT_EMAIL }}
+      - name: Run vessel diversion scan & send alerts
+        run: node ais-monitor.js
+        env:
+          ZOHO_USER:      ${{ secrets.ZOHO_USER }}
+          ZOHO_PASS:      ${{ secrets.ZOHO_PASS }}
+          ALERT_EMAIL:    ${{ secrets.ALERT_EMAIL }}
+          AISSTREAM_KEY:  ${{ secrets.AISSTREAM_KEY }}
