@@ -71,20 +71,61 @@ const PORTS = [
   },
 ];
 
-// ── Gulf of Oman monitoring zone ──────────────────────────────────
-// Vessels here heading AWAY from Hormuz (course > 100 or < 260) = diverting
+// ── Monitoring zones — Gulf of Oman + Red Sea + Arabian Sea ──────
+// Three zones covering all major diversion corridors
+const MONITOR_ZONES = [
+  {
+    id: "gulf_oman",
+    name: "Gulf of Oman",
+    description: "Vessels deviating from Strait of Hormuz",
+    lat_min: 22.0, lat_max: 27.0,
+    lon_min: 54.0, lon_max: 62.0,
+    // Heading south/east = bypassing Hormuz
+    deviating_course_min: 100, deviating_course_max: 260,
+  },
+  {
+    id: "red_sea",
+    name: "Red Sea",
+    description: "Vessels avoiding Bab el-Mandeb / Houthi threat zone",
+    lat_min: 12.0, lat_max: 22.0,
+    lon_min: 38.0, lon_max: 45.0,
+    // Heading west/south = diverting away from Suez route
+    deviating_course_min: 150, deviating_course_max: 300,
+  },
+  {
+    id: "arabian_sea",
+    name: "Arabian Sea",
+    description: "Vessels rerouting around Indian Ocean",
+    lat_min: 10.0, lat_max: 22.0,
+    lon_min: 55.0, lon_max: 68.0,
+    // Any vessel at slow speed in this zone during conflict = potential diversion
+    deviating_course_min: 80, deviating_course_max: 280,
+  },
+];
+
+// Keep a flat zone for AISStream bounding box (use combined area)
 const MONITOR_ZONE = {
-  lat_min: 22.0, lat_max: 27.0,
-  lon_min: 54.0, lon_max: 60.0,
+  lat_min: 10.0, lat_max: 27.0,
+  lon_min: 38.0, lon_max: 68.0,
 };
 
-// Hormuz is at roughly lon 56.5. Heading east (course 80-180) = bypassing
 function isDeviating(course, lat, lon) {
-  // Vessel in Gulf of Oman heading south/east away from Strait
-  const inZone = lat >= MONITOR_ZONE.lat_min && lat <= MONITOR_ZONE.lat_max &&
-                 lon >= MONITOR_ZONE.lon_min && lon <= MONITOR_ZONE.lon_max;
-  const headingAway = course >= 100 && course <= 260; // southward/eastward = away from Hormuz
-  return inZone && headingAway;
+  for (const zone of MONITOR_ZONES) {
+    const inZone = lat >= zone.lat_min && lat <= zone.lat_max &&
+                   lon >= zone.lon_min && lon <= zone.lon_max;
+    const headingAway = course >= zone.deviating_course_min &&
+                        course <= zone.deviating_course_max;
+    if (inZone && headingAway) return { deviating: true, zone: zone.name };
+  }
+  return { deviating: false, zone: null };
+}
+
+function getZoneName(lat, lon) {
+  for (const zone of MONITOR_ZONES) {
+    if (lat >= zone.lat_min && lat <= zone.lat_max &&
+        lon >= zone.lon_min && lon <= zone.lon_max) return zone.name;
+  }
+  return "Unknown Zone";
 }
 
 function nearestPort(lat, lon) {
@@ -214,7 +255,7 @@ function buildAlertEmail(vessels, divertingVessels) {
     const etaDate = new Date(today.getTime() + etaHrs * 3600000);
     const fmtETA  = d => d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"}) + " " + d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
 
-    body += `VESSEL: ${v.name}\n`;
+    body += `VESSEL: ${v.name} [${v.zone || "Gulf Region"}]\n`;
     body += `MMSI: ${v.mmsi} | IMO: ${v.imo || "N/A"} | Flag: ${v.flag}\n`;
     body += `Type: ${v.type} | Speed: ${v.speed} kn | Course: ${v.course}°\n`;
     body += `Position: ${v.lat.toFixed(4)}°N ${v.lon.toFixed(4)}°E\n`;
@@ -321,8 +362,15 @@ async function main() {
 
   // 2. Identify deviating vessels
   const deviating = vessels
-    .filter(v => isDeviating(v.course, v.lat, v.lon) && v.speed > 2)
-    .map(v => ({ ...v, nearest_port: nearestPort(v.lat, v.lon) }));
+    .filter(v => {
+      const result = isDeviating(v.course, v.lat, v.lon);
+      return result.deviating && v.speed > 2;
+    })
+    .map(v => ({
+      ...v,
+      nearest_port: nearestPort(v.lat, v.lon),
+      zone: getZoneName(v.lat, v.lon),
+    }));
 
   console.log(`[ARB] ${deviating.length} deviating vessel(s) identified`);
   deviating.forEach(v => console.log(`[ARB]   ${v.name} — Course ${v.course}° — Nearest: ${v.nearest_port.name}`));
