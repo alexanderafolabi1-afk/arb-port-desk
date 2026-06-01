@@ -4,6 +4,7 @@
   "description": "ARB Group vessel diversion monitor",
   "main": "ais-monitor.js",
   "dependencies": {
-    "nodemailer": "^6.9.9"
+    "nodemailer": "^6.9.9",
+    "ws": "^8.16.0"
   }
 }
