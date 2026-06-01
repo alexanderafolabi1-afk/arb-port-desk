@@ -185,6 +185,7 @@ function buildAlertEmail(vessels, divertingVessels) {
     body += `Type: ${v.type} | Speed: ${v.speed} kn | Course: ${v.course}°\n`;
     body += `Position: ${v.lat.toFixed(4)}°N ${v.lon.toFixed(4)}°E\n`;
     body += `Status: DEVIATING — heading away from Strait of Hormuz\n\n`;
+    body += `MarineTraffic: https://www.marinetraffic.com/en/ais/details/ships/mmsi:${v.mmsi}\n`;
     body += `NEAREST ALTERNATIVE PORT: ${port.name}, ${port.country}\n`;
     body += `Distance: ~${distNM} nautical miles\n`;
     body += `ETA (estimated): ${fmtETA(etaDate)}\n`;
