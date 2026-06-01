@@ -1,0 +1,9 @@
+{
+  "name": "arb-port-monitor",
+  "version": "1.0.0",
+  "description": "ARB Group vessel diversion monitor",
+  "main": "ais-monitor.js",
+  "dependencies": {
+    "nodemailer": "^6.9.9"
+  }
+}
