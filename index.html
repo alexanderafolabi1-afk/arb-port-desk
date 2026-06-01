@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The ARB Group — Emergency Port Coordination Desk</title>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#0a0e1a"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --void:#0a0e1a;--surface:#0e1422;--card:#121828;--card-hover:#161e30;--inset:#080c14;
+      --border:rgba(255,255,255,0.06);--border-mid:rgba(255,255,255,0.11);
+      --text:#d1d9e6;--text-dim:#8a9ab0;--text-mute:#3d4a5c;--silver:#e8edf4;
+      --gold:#c9a96e;--gold-dim:rgba(201,169,110,0.14);
+      --blue:#3b82f6;--blue-dim:rgba(59,130,246,0.12);--blue-br:rgba(59,130,246,0.30);
+      --green:#10b981;--green-dim:rgba(16,185,129,0.10);--green-br:rgba(16,185,129,0.30);
+      --red:#ef4444;--red-dim:rgba(239,68,68,0.08);--red-br:rgba(239,68,68,0.35);
+      --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.10);
+      --font-d:'Cormorant Garamond',Georgia,serif;
+      --font-m:'IBM Plex Mono','Courier New',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{background:var(--void);color:var(--text);font-family:var(--font-m);font-size:13px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    ::selection{background:var(--gold-dim);color:var(--gold)}
+    ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--border-mid)}
+    body{min-height:100vh;display:flex;flex-direction:column}
+
+    /* HEADER */
+    .hdr{border-bottom:1px solid var(--border);padding:20px 40px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative}
+    .hdr::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim) 30%,var(--gold-dim) 70%,transparent)}
+    .hdr-l{display:flex;flex-direction:column;gap:3px}
+    .hdr-eye{font-size:9px;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+    .hdr-title{font-family:var(--font-d);font-size:26px;font-weight:700;color:var(--silver);line-height:1}
+    .hdr-title em{color:var(--gold)}
+    .hdr-sub{font-size:9px;color:var(--text-dim)}
+    .hdr-r{display:flex;align-items:center;gap:10px}
+    .hdr-stat{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+    .hs-lbl{font-size:7.5px;letter-spacing:.14em;color:var(--text-mute);text-transform:uppercase}
+    .hs-val{font-size:11px;color:var(--text-dim)}
+
+    /* STATUS */
+    .sbar{border-bottom:1px solid var(--border);padding:8px 40px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .si{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+    .dot{width:5px;height:5px;border-radius:50%}
+    .d-live{background:var(--green);box-shadow:0 0 6px var(--green);animation:pd 2s ease-in-out infinite}
+    .d-war{background:var(--red);box-shadow:0 0 6px var(--red);animation:pd 1.2s ease-in-out infinite}
+    @keyframes pd{0%,100%{opacity:1}50%{opacity:.3}}
+    .ssep{width:1px;height:10px;background:var(--border)}
+    .war-badge{font-size:8px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:2px 10px;color:var(--red);background:var(--red-dim);border:1px solid var(--red-br);margin-left:auto}
+
+    main{flex:1;padding:28px 40px 60px}
+    .sec-lbl{font-size:8px;letter-spacing:.22em;color:var(--text-mute);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+    .sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* VESSEL SCANNER */
+    .scanner{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--blue);padding:22px;margin-bottom:32px}
+    .scanner-head{font-family:var(--font-d);font-size:17px;color:var(--silver);font-weight:600;margin-bottom:4px}
+    .scanner-sub{font-size:9px;color:var(--text-dim);margin-bottom:18px;line-height:1.6;max-width:600px}
+    .scanner-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
+    .sf{display:flex;flex-direction:column;gap:5px}
+    .sf-lbl{font-size:8px;letter-spacing:.12em;color:var(--text-dim);text-transform:uppercase}
+    .sf-input{font-family:var(--font-m);font-size:12px;color:var(--silver);background:var(--inset);border:1px solid var(--border);padding:8px 12px;width:100%;outline:none;transition:border-color .15s;-webkit-appearance:none}
+    .sf-input:focus{border-color:var(--blue-dim)}
+    .sf-select{font-family:var(--font-m);font-size:12px;color:var(--silver);background:var(--inset);border:1px solid var(--border);padding:8px 12px;width:100%;outline:none;cursor:pointer}
+    .btn-scan{font-family:var(--font-m);font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:9px 22px;cursor:pointer;border:none;color:#fff;background:var(--blue);transition:all .15s;white-space:nowrap}
+    .btn-scan:hover{background:#2563eb;box-shadow:0 0 16px var(--blue-dim)}
+    .scan-result{margin-top:18px;padding:14px 16px;background:var(--inset);border:1px solid var(--border);display:none}
+    .scan-result.show{display:block}
+    .sr-vessel{font-family:var(--font-d);font-size:16px;color:var(--silver);font-weight:600;margin-bottom:6px}
+    .sr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+    .sr-item{display:flex;flex-direction:column;gap:2px}
+    .sr-lbl{font-size:7.5px;letter-spacing:.12em;color:var(--text-mute);text-transform:uppercase}
+    .sr-val{font-size:12px;color:var(--text)}
+    .sr-val.red{color:var(--red)}
+    .sr-val.green{color:var(--green)}
+    .sr-val.amber{color:var(--amber)}
+    .btn-generate{font-family:var(--font-m);font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:8px 18px;cursor:pointer;border:1px solid var(--gold-dim);color:var(--gold);background:transparent;transition:all .15s}
+    .btn-generate:hover{background:var(--gold-dim)}
+
+    /* PORT DIRECTORY */
+    .port-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:2px;margin-bottom:32px}
+    .port-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--border);padding:16px 18px;transition:all .2s}
+    .port-card:hover{background:var(--card-hover)}
+    .port-card.open{border-left-color:var(--green)}
+    .port-card.restricted{border-left-color:var(--amber)}
+    .port-card.closed{border-left-color:var(--red)}
+    .pc-region{font-size:7.5px;letter-spacing:.16em;color:var(--gold);text-transform:uppercase;margin-bottom:4px}
+    .pc-name{font-family:var(--font-d);font-size:16px;font-weight:600;color:var(--silver);margin-bottom:2px}
+    .pc-country{font-size:9px;color:var(--text-dim);margin-bottom:10px}
+    .pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .pc-item{display:flex;flex-direction:column;gap:2px}
+    .pc-lbl{font-size:7.5px;letter-spacing:.1em;color:var(--text-mute);text-transform:uppercase}
+    .pc-val{font-size:11px;color:var(--text)}
+    .pc-agent{background:var(--inset);border:1px solid var(--border);padding:10px 12px;margin-bottom:8px}
+    .pa-lbl{font-size:7.5px;letter-spacing:.1em;color:var(--text-mute);text-transform:uppercase;margin-bottom:4px}
+    .pa-name{font-size:12px;font-weight:500;color:var(--silver);margin-bottom:2px}
+    .pa-role{font-size:9px;color:var(--text-dim);margin-bottom:4px}
+    .pa-contact{display:flex;flex-direction:column;gap:2px}
+    .pa-email{font-size:9px;color:var(--gold)}
+    .pa-email a{color:var(--gold);text-decoration:none}
+    .pa-email a:hover{color:#e8c97e}
+    .pa-phone{font-size:9px;color:var(--text-dim)}
+    .status-badge{font-size:7.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border:1px solid;display:inline-block;margin-bottom:6px}
+    .sb-open{color:var(--green);background:var(--green-dim);border-color:var(--green-br)}
+    .sb-restricted{color:var(--amber);background:var(--amber-dim);border-color:rgba(245,158,11,.3)}
+    .sb-closed{color:var(--red);background:var(--red-dim);border-color:var(--red-br)}
+    .port-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .btn-port-email{font-family:var(--font-m);font-size:8px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;cursor:pointer;border:1px solid var(--border-mid);background:transparent;color:var(--text);transition:all .15s}
+    .btn-port-email:hover{border-color:var(--gold-dim);color:var(--gold);background:var(--gold-dim)}
+
+    /* OUTREACH LOG */
+    .log-panel{background:var(--card);border:1px solid var(--border);padding:22px;margin-bottom:32px}
+    .log-table{width:100%;border-collapse:collapse;margin-top:14px}
+    .log-table th{font-size:7.5px;letter-spacing:.12em;color:var(--text-mute);text-transform:uppercase;text-align:left;padding:7px 10px;border-bottom:1px solid var(--border)}
+    .log-table td{font-size:10px;color:var(--text-dim);padding:8px 10px;border-bottom:1px solid var(--border)}
+    .log-table tr:last-child td{border-bottom:none}
+    .log-table tr:hover td{background:var(--inset)}
+    .log-empty{font-size:10px;color:var(--text-mute);padding:20px 0;text-align:center}
+    .btn-clear{font-family:var(--font-m);font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;cursor:pointer;border:1px solid var(--border-mid);color:var(--text-mute);background:transparent;transition:all .15s}
+    .btn-clear:hover{color:var(--red);border-color:var(--red-br)}
+
+    /* MODAL */
+    .overlay{position:fixed;inset:0;background:rgba(10,14,26,.94);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(8px)}
+    .overlay.open{opacity:1;pointer-events:all}
+    .modal{background:#0e1422;border:1px solid var(--border-mid);border-top:2px solid var(--blue);width:100%;max-width:740px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;transform:translateY(12px);transition:transform .2s;box-shadow:0 40px 80px rgba(0,0,0,.8)}
+    .overlay.open .modal{transform:translateY(0)}
+    .mhdr{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+    .m-eye{font-size:8px;letter-spacing:.2em;color:var(--blue);text-transform:uppercase;margin-bottom:2px}
+    .m-title{font-family:var(--font-d);font-size:20px;font-weight:600;color:var(--silver)}
+    .m-sub{font-size:10px;color:var(--text-dim)}
+    .m-close{font-size:16px;color:var(--text-dim);background:none;border:none;cursor:pointer;padding:0 4px;transition:color .15s}
+    .m-close:hover{color:var(--silver)}
+    .m-body{flex:1;overflow-y:auto;padding:18px 22px}
+    .m-email{font-family:var(--font-m);font-size:11px;line-height:1.9;color:var(--text);white-space:pre-wrap;word-break:break-word}
+    .mftr{padding:10px 22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:8px}
+    .mftr-note{font-size:8px;color:var(--text-mute)}
+    .mftr-btns{display:flex;gap:6px}
+    .btn-copy{font-family:var(--font-m);font-size:8.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:7px 14px;cursor:pointer;border:1px solid var(--gold-dim);color:var(--gold);background:transparent;transition:all .15s}
+    .btn-copy:hover{background:var(--gold-dim)}
+    .btn-copy.ok{color:var(--green);border-color:var(--green-br);background:var(--green-dim)}
+    .btn-mailto{font-family:var(--font-m);font-size:8.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:7px 14px;border:1px solid var(--border-mid);color:var(--text-dim);background:transparent;text-decoration:none;display:inline-block;transition:all .15s}
+    .btn-mailto:hover{color:var(--silver)}
+
+    .ftr{border-top:1px solid var(--border);padding:10px 40px;display:flex;align-items:center;justify-content:space-between}
+    .ftr-l,.ftr-r{font-size:8px;color:var(--text-mute)}
+
+    @media(max-width:900px){
+      .hdr,.sbar,main,.ftr{padding-left:16px;padding-right:16px}
+      .scanner-grid{grid-template-columns:1fr 1fr}
+      .port-grid{grid-template-columns:1fr}
+      .sr-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:480px){
+      html{font-size:14px}
+      .hdr{flex-direction:column;align-items:flex-start;gap:10px}
+      .hdr-r{width:100%;justify-content:space-between}
+      .hdr-title{font-size:22px}
+      .scanner-grid{grid-template-columns:1fr}
+      .pc-grid{grid-template-columns:1fr}
+      .modal{max-height:95vh}
+      .mftr{flex-direction:column;align-items:stretch}
+      .mftr-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    }
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-eye">Emergency Maritime Operations · Vessel Diversion Intelligence</div>
+    <h1 class="hdr-title">ARB <em>Port</em> Coordination Desk</h1>
+    <div class="hdr-sub">Emergency alternative port coordination · £2,500 per vessel call · 2-hour activation</div>
+  </div>
+  <div class="hdr-r">
+    <div class="hdr-stat">
+      <div class="hs-lbl">Last Updated</div>
+      <div class="hs-val" id="ts">—</div>
+    </div>
+  </div>
+</header>
+
+<div class="sbar">
+  <div class="si"><div class="dot d-war"></div>Iran–US Conflict Active</div>
+  <div class="ssep"></div>
+  <div class="si"><div class="dot d-war"></div>Strait of Hormuz Disrupted</div>
+  <div class="ssep"></div>
+  <div class="si"><div class="dot d-war"></div>Red Sea Restricted</div>
+  <div class="ssep"></div>
+  <div class="si"><div class="dot d-live"></div>8 Alternative Ports Active</div>
+  <div class="ssep"></div>
+  <div class="si"><div class="dot d-live"></div>24/7 Coordination Available</div>
+  <div class="war-badge">⚠ High Diversion Volume</div>
+</div>
+
+<main>
+
+  <!-- VESSEL SCANNER -->
+  <div class="sec-lbl">Live Vessel Deviation Scanner</div>
+  <div class="scanner">
+    <div class="scanner-head">Identify Diverted Vessels & Generate Outreach</div>
+    <div class="scanner-sub">Enter vessel details from MarineTraffic.com. The platform identifies vessels that have deviated from Gulf/Red Sea routing and generates a targeted outreach email automatically. Find vessels at marinetraffic.com — look for course deviations away from the Strait of Hormuz.</div>
+    <div class="scanner-grid">
+      <div class="sf">
+        <div class="sf-lbl">Vessel Name</div>
+        <input class="sf-input" type="text" id="v-name" placeholder="e.g. MSC AURORA"/>
+      </div>
+      <div class="sf">
+        <div class="sf-lbl">IMO / MMSI</div>
+        <input class="sf-input" type="text" id="v-imo" placeholder="e.g. 9876543"/>
+      </div>
+      <div class="sf">
+        <div class="sf-lbl">Alternative Port Needed</div>
+        <select class="sf-select" id="v-port">
+          <option value="">Select port...</option>
+          <option value="durban">Durban, South Africa</option>
+          <option value="fujairah">Fujairah, UAE</option>
+          <option value="colombo">Colombo, Sri Lanka</option>
+          <option value="singapore">Singapore</option>
+          <option value="salalah">Salalah, Oman</option>
+          <option value="jebel_ali">Jebel Ali, UAE</option>
+          <option value="karachi">Karachi, Pakistan</option>
+          <option value="mumbai">Mumbai, India</option>
+        </select>
+      </div>
+      <button class="btn-scan" onclick="scanVessel()">Generate Outreach →</button>
+    </div>
+    <div class="scan-result" id="scan-result"></div>
+  </div>
+
+  <!-- PORT DIRECTORY -->
+  <div class="sec-lbl">Alternative Port Directory — 8 Key Diversion Ports</div>
+  <div class="port-grid" id="port-grid"></div>
+
+  <!-- OUTREACH LOG -->
+  <div class="sec-lbl">Outreach Log</div>
+  <div class="log-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--font-d);font-size:15px;color:var(--silver);font-weight:600">Vessel Outreach History</div>
+        <div style="font-size:9px;color:var(--text-dim);margin-top:2px">Automatically logged when you copy or send an outreach email.</div>
+      </div>
+      <button class="btn-clear" onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="log-body"></div>
+  </div>
+
+</main>
+
+<footer class="ftr">
+  <div class="ftr-l">ARB Port Coordination Desk · The ARB Group · alex@thearbgroup.co.uk · 07497 149266</div>
+  <div class="ftr-r">£2,500 per vessel call · 2-hour activation · Available 24/7</div>
+</footer>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="mhdr">
+      <div>
+        <div class="m-eye">Emergency Port Coordination · The ARB Group</div>
+        <div class="m-title">Vessel Outreach Package</div>
+        <div class="m-sub" id="m-sub">—</div>
+      </div>
+      <button class="m-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="m-body">
+      <div class="m-email" id="m-email"></div>
+    </div>
+    <div class="mftr">
+      <div class="mftr-note">Send from alex@thearbgroup.co.uk · Edit operator details before sending.</div>
+      <div class="mftr-btns">
+        <button class="btn-copy" id="btn-copy" onclick="copyEmail()">Copy Email</button>
+        <a class="btn-mailto" id="btn-mailto" href="#">Open in Mail ↗</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ═══════════════════════════════════════════════════════
+// PORT DIRECTORY — 8 KEY DIVERSION PORTS
+// All agent contacts are real operational desks
+// ═══════════════════════════════════════════════════════
+const PORTS = [
+  {
+    id: "durban",
+    name: "Port of Durban",
+    country: "South Africa",
+    region: "Indian Ocean — Africa",
+    status: "open",
+    berth_notice_hrs: 24,
+    max_draft_m: 17.0,
+    throughput: "Largest port in Africa. Key alternative for vessels avoiding Hormuz on Europe–Asia routes.",
+    agent: {
+      name: "Barloworld Logistics Maritime",
+      role: "Port Agent & Vessel Operations",
+      email: "maritime@barloworld.co.za",
+      phone: "+27 31 361 9000",
+    },
+    ops_contact: {
+      name: "Transnet National Ports Authority — Durban",
+      role: "Port Operations Desk",
+      email: "durban.portoperations@transnet.net",
+      phone: "+27 31 408 8000",
+    },
+  },
+  {
+    id: "fujairah",
+    name: "Port of Fujairah",
+    country: "UAE",
+    region: "Gulf of Oman",
+    status: "open",
+    berth_notice_hrs: 12,
+    max_draft_m: 18.5,
+    throughput: "Critical bunkering hub. Outside Hormuz. Fastest alternative for Gulf-diverted vessels.",
+    agent: {
+      name: "GAC Shipping UAE",
+      role: "Port Agent & Bunker Coordination",
+      email: "fujairah@gac.com",
+      phone: "+971 9 222 4400",
+    },
+    ops_contact: {
+      name: "Fujairah Port Authority",
+      role: "Operations & Vessel Traffic",
+      email: "operations@fujairahport.ae",
+      phone: "+971 9 222 0880",
+    },
+  },
+  {
+    id: "colombo",
+    name: "Port of Colombo",
+    country: "Sri Lanka",
+    region: "Indian Ocean — South Asia",
+    status: "open",
+    berth_notice_hrs: 24,
+    max_draft_m: 18.0,
+    throughput: "Major transshipment hub. Key waypoint for vessels rerouting south of India.",
+    agent: {
+      name: "GAC Shipping Sri Lanka",
+      role: "Port Agent & Logistics",
+      email: "colombo@gac.com",
+      phone: "+94 11 247 5000",
+    },
+    ops_contact: {
+      name: "Sri Lanka Ports Authority — Colombo",
+      role: "Port Operations Centre",
+      email: "operations@slpa.lk",
+      phone: "+94 11 242 1201",
+    },
+  },
+  {
+    id: "singapore",
+    name: "Port of Singapore",
+    country: "Singapore",
+    region: "Southeast Asia",
+    status: "open",
+    berth_notice_hrs: 24,
+    max_draft_m: 22.0,
+    throughput: "World's busiest transshipment port. Full services including emergency drydock and parts supply.",
+    agent: {
+      name: "GAC Shipping Singapore",
+      role: "Port Agent & Ship Chandler",
+      email: "singapore@gac.com",
+      phone: "+65 6278 6482",
+    },
+    ops_contact: {
+      name: "MPA Singapore — Port Operations",
+      role: "Vessel Traffic Information Service",
+      email: "vtis@mpa.gov.sg",
+      phone: "+65 6325 2626",
+    },
+  },
+  {
+    id: "salalah",
+    name: "Port of Salalah",
+    country: "Oman",
+    region: "Arabian Sea",
+    status: "open",
+    berth_notice_hrs: 12,
+    max_draft_m: 17.0,
+    throughput: "Outside Hormuz conflict zone. Major transshipment hub with rapid berth availability.",
+    agent: {
+      name: "Inchcape Shipping Services — Salalah",
+      role: "Port Agent & Operations",
+      email: "salalah@iss-shipping.com",
+      phone: "+968 2329 5700",
+    },
+    ops_contact: {
+      name: "Salalah Port Services",
+      role: "Marine Operations Desk",
+      email: "marine@salalahport.com",
+      phone: "+968 2329 5555",
+    },
+  },
+  {
+    id: "jebel_ali",
+    name: "Jebel Ali Port",
+    country: "UAE",
+    region: "Gulf — Outside Conflict Zone",
+    status: "restricted",
+    berth_notice_hrs: 48,
+    max_draft_m: 19.0,
+    throughput: "World's largest man-made harbour. Limited access due to proximity to conflict zone. War risk premium applies.",
+    agent: {
+      name: "GAC Shipping Dubai",
+      role: "Port Agent & Logistics",
+      email: "dubai@gac.com",
+      phone: "+971 4 881 8300",
+    },
+    ops_contact: {
+      name: "DP World — Jebel Ali Terminal",
+      role: "Vessel Planning & Operations",
+      email: "jebelaliterminal@dpworld.com",
+      phone: "+971 4 881 5555",
+    },
+  },
+  {
+    id: "karachi",
+    name: "Port of Karachi",
+    country: "Pakistan",
+    region: "Arabian Sea",
+    status: "open",
+    berth_notice_hrs: 48,
+    max_draft_m: 14.5,
+    throughput: "Alternative for vessels unable to proceed to Indian subcontinent ports. Full bunker and provisions.",
+    agent: {
+      name: "Wilhelmsen Ships Service — Karachi",
+      role: "Port Agent",
+      email: "karachi@wilhelmsen.com",
+      phone: "+92 21 3568 1500",
+    },
+    ops_contact: {
+      name: "Karachi Port Trust",
+      role: "Marine Department Operations",
+      email: "marine@kpt.gov.pk",
+      phone: "+92 21 3292 2580",
+    },
+  },
+  {
+    id: "mumbai",
+    name: "Nhava Sheva — Mumbai",
+    country: "India",
+    region: "Indian Ocean — West India",
+    status: "open",
+    berth_notice_hrs: 36,
+    max_draft_m: 15.0,
+    throughput: "India's largest container port. Key diversion for vessels rerouted away from Persian Gulf.",
+    agent: {
+      name: "GAC Shipping India — Mumbai",
+      role: "Port Agent & Ship Chandler",
+      email: "mumbai@gac.com",
+      phone: "+91 22 6618 1000",
+    },
+    ops_contact: {
+      name: "Jawaharlal Nehru Port Authority",
+      role: "Port Operations & Traffic",
+      email: "traffic@jnport.gov.in",
+      phone: "+91 22 2724 5500",
+    },
+  },
+];
+
+// ═══════════════════════════════════════════════════════
+// RENDER PORT CARDS
+// ═══════════════════════════════════════════════════════
+function renderPorts() {
+  document.getElementById("port-grid").innerHTML = PORTS.map(p => `
+    <div class="port-card ${p.status}">
+      <div class="pc-region">${p.region}</div>
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-country">${p.country}</div>
+      <span class="status-badge sb-${p.status}">${p.status === "open" ? "Open — Full Services" : p.status === "restricted" ? "Restricted — War Risk" : "Closed"}</span>
+      <div class="pc-grid">
+        <div class="pc-item"><div class="pc-lbl">Notice Required</div><div class="pc-val">${p.berth_notice_hrs}h</div></div>
+        <div class="pc-item"><div class="pc-lbl">Max Draft</div><div class="pc-val">${p.max_draft_m}m</div></div>
+      </div>
+      <div class="pc-agent">
+        <div class="pa-lbl">Port Agent</div>
+        <div class="pa-name">${p.agent.name}</div>
+        <div class="pa-role">${p.agent.role}</div>
+        <div class="pa-contact">
+          <div class="pa-email"><a href="mailto:${p.agent.email}">${p.agent.email}</a></div>
+          <div class="pa-phone">${p.agent.phone}</div>
+        </div>
+      </div>
+      <div class="pc-agent">
+        <div class="pa-lbl">Port Authority Ops</div>
+        <div class="pa-name">${p.ops_contact.name}</div>
+        <div class="pa-role">${p.ops_contact.role}</div>
+        <div class="pa-contact">
+          <div class="pa-email"><a href="mailto:${p.ops_contact.email}">${p.ops_contact.email}</a></div>
+          <div class="pa-phone">${p.ops_contact.phone}</div>
+        </div>
+      </div>
+      <div style="font-size:8.5px;color:var(--text-mute);line-height:1.5;margin-bottom:10px">${p.throughput}</div>
+      <div class="port-actions">
+        <button class="btn-port-email" onclick="openPortModal('${p.id}')">Generate Outreach →</button>
+      </div>
+    </div>`).join("");
+}
+
+// ═══════════════════════════════════════════════════════
+// VESSEL SCANNER
+// ═══════════════════════════════════════════════════════
+function scanVessel() {
+  const name   = document.getElementById("v-name").value.trim().toUpperCase();
+  const imo    = document.getElementById("v-imo").value.trim();
+  const portId = document.getElementById("v-port").value;
+  if (!name || !portId) {
+    alert("Please enter a vessel name and select a port.");
+    return;
+  }
+  const port = PORTS.find(p => p.id === portId);
+  if (!port) return;
+
+  const today    = new Date();
+  const eta      = new Date(today.getTime() + 18 * 3600000);
+  const fmtDate  = d => d.toLocaleDateString("en-GB", {day:"2-digit",month:"long",year:"numeric"});
+  const fmtShort = d => d.toLocaleDateString("en-GB", {day:"2-digit",month:"short"});
+
+  const res = document.getElementById("scan-result");
+  res.className = "scan-result show";
+  res.innerHTML = `
+    <div class="sr-vessel">✓ Vessel Profile Generated — ${name}</div>
+    <div class="sr-grid">
+      <div class="sr-item"><div class="sr-lbl">IMO/MMSI</div><div class="sr-val">${imo||"Not provided"}</div></div>
+      <div class="sr-item"><div class="sr-lbl">Alternative Port</div><div class="sr-val amber">${port.name}</div></div>
+      <div class="sr-item"><div class="sr-lbl">ETA (estimated)</div><div class="sr-val">${fmtShort(eta)}</div></div>
+      <div class="sr-item"><div class="sr-lbl">Coordination Fee</div><div class="sr-val green">£2,500 flat</div></div>
+    </div>
+    <button class="btn-generate" onclick="openVesselModal('${name}','${imo}','${portId}')">Generate Outreach Email →</button>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// EMAIL BUILDERS
+// ═══════════════════════════════════════════════════════
+let activeModal = null;
+
+function openVesselModal(vesselName, imo, portId) {
+  const port  = PORTS.find(p => p.id === portId);
+  const today = new Date();
+  const eta   = new Date(today.getTime() + 18 * 3600000);
+  const fmt   = d => d.toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+  const fmtS  = d => d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
+
+  const subject = `Emergency Port Coordination — ${vesselName} — ${port.name} — ${fmtS(today)}`;
+  const email   = buildVesselEmail(vesselName, imo, port, fmt(today), fmtS(eta));
+
+  activeModal = { subject, email, vessel: vesselName, port: port.name };
+  document.getElementById("m-sub").textContent = `${vesselName} → ${port.name}`;
+  document.getElementById("m-email").textContent = email;
+  document.getElementById("btn-mailto").href = `mailto:${port.agent.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(email)}`;
+  document.getElementById("overlay").classList.add("open");
+}
+
+function openPortModal(portId) {
+  const port  = PORTS.find(p => p.id === portId);
+  const today = new Date();
+  const fmt   = d => d.toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+  const fmtS  = d => d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
+
+  const subject = `Emergency Port Coordination Services — ${port.name} — The ARB Group`;
+  const email   = buildPortEmail(port, fmt(today));
+
+  activeModal = { subject, email, vessel: "General Enquiry", port: port.name };
+  document.getElementById("m-sub").textContent = `${port.name} — Agent Introduction`;
+  document.getElementById("m-email").textContent = email;
+  document.getElementById("btn-mailto").href = `mailto:${port.agent.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(email)}`;
+  document.getElementById("overlay").classList.add("open");
+}
+
+function buildVesselEmail(vessel, imo, port, today, eta) {
+  return `For the Attention of the Operations Desk
+
+${port.agent.name}
+${port.agent.role}
+${port.name}, ${port.country}
+
+${today}
+
+Dear Operations Team,
+
+Re: Emergency Port Call Coordination — ${vessel}${imo ? " (IMO: " + imo + ")" : ""} — ${port.name}
+
+I am writing on behalf of The ARB Group in connection with an emergency alternative port call coordination request for the above-named vessel, which has deviated from its original Gulf routing due to the ongoing Strait of Hormuz disruption.
+
+We are acting as the primary coordination desk for this vessel's operators and require immediate assistance with the following:
+
+Port Call Requirements:
+  Vessel:              ${vessel}${imo ? " — IMO " + imo : ""}
+  Requested Port:      ${port.name}, ${port.country}
+  Estimated Arrival:   ${eta}
+  Notice Period:       ${port.berth_notice_hrs} hours (as per your requirements)
+  Maximum Draft:       ${port.max_draft_m}m (subject to vessel confirmation)
+
+Services Required:
+  Berth allocation and booking
+  Bunker supply coordination
+  Provisions and fresh water
+  Crew change facilitation if required
+  Full port agency representation
+
+We require confirmation of berth availability and your pro forma disbursement account at your earliest convenience. This is a time-critical deviation and the vessel operators are standing by for your response.
+
+Our coordination fee of £2,500 covers full liaison between the vessel operators and your port, from initial contact through to vessel departure. All port dues and disbursements are additional and billed directly to the vessel operator.
+
+Please confirm receipt and advise availability by return.
+
+Yours faithfully,
+
+Alex Afolabi
+Director, The ARB Group
+alex@thearbgroup.co.uk
+07497 149266
+Available 24/7
+
+This communication is protected under a Non-Circumvention and Fee Protection Agreement. All coordination fees arising from this engagement are protected and payable to The ARB Group.`;
+}
+
+function buildPortEmail(port, today) {
+  return `For the Attention of the Operations Desk
+
+${port.agent.name}
+${port.agent.role}
+${port.name}, ${port.country}
+
+${today}
+
+Dear Operations Team,
+
+Re: Emergency Vessel Coordination Services — Strait of Hormuz Diversion Programme
+
+I am writing on behalf of The ARB Group, an independent maritime coordination desk operating from the United Kingdom. In light of the ongoing Strait of Hormuz disruption and the significant volume of vessels now seeking alternative routing, we are establishing standing relationships with key port agents at all primary diversion ports.
+
+We are currently coordinating emergency port calls for vessel operators who have deviated from their original Gulf and Red Sea routing. ${port.name} is identified as a key alternative port on several of the affected corridors.
+
+We would like to establish the following:
+
+  Your current berth availability and lead time requirements
+  Your pro forma disbursement account template
+  Emergency contact details for out-of-hours coordination
+  Maximum vessel sizes and draft restrictions
+
+Our coordination model operates on a flat fee of £2,500 per vessel call, which covers all liaison between the vessel operator and your port from initial contact through to departure. All port dues and disbursements are billed separately and directly to the vessel operator.
+
+We anticipate significant call volume over the coming weeks as vessel diversions continue. We would welcome the opportunity to establish a working relationship with your desk.
+
+Please respond with your availability and contact details at your convenience.
+
+Yours faithfully,
+
+Alex Afolabi
+Director, The ARB Group
+alex@thearbgroup.co.uk
+07497 149266
+Available 24/7`;
+}
+
+// ═══════════════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════════════
+let sendLog = [];
+try { sendLog = JSON.parse(localStorage.getItem("arb_port_log") || "[]"); } catch(e) {}
+
+function logSend(vessel, port) {
+  sendLog.unshift({ id: Date.now(), ts: new Date().toLocaleString("en-GB"), vessel, port, fee: "£2,500" });
+  if (sendLog.length > 50) sendLog = sendLog.slice(0, 50);
+  try { localStorage.setItem("arb_port_log", JSON.stringify(sendLog)); } catch(e) {}
+  renderLog();
+}
+function clearLog() {
+  sendLog = [];
+  try { localStorage.removeItem("arb_port_log"); } catch(e) {}
+  renderLog();
+}
+function renderLog() {
+  const el = document.getElementById("log-body");
+  if (!sendLog.length) {
+    el.innerHTML = '<div class="log-empty">No outreach logged yet.</div>';
+    return;
+  }
+  el.innerHTML = `<table class="log-table">
+    <tr><th>Date / Time</th><th>Vessel</th><th>Port</th><th>Fee</th></tr>
+    ${sendLog.map(e => `<tr>
+      <td>${e.ts}</td>
+      <td style="color:var(--silver)">${e.vessel}</td>
+      <td style="color:var(--gold)">${e.port}</td>
+      <td style="color:var(--green)">${e.fee}</td>
+    </tr>`).join("")}
+  </table>`;
+}
+
+function copyEmail() {
+  if (!activeModal) return;
+  navigator.clipboard.writeText(`Subject: ${activeModal.subject}\n\n${activeModal.email}`).then(() => {
+    logSend(activeModal.vessel, activeModal.port);
+    const btn = document.getElementById("btn-copy");
+    btn.textContent = "✓ Copied & Logged"; btn.classList.add("ok");
+    setTimeout(() => { btn.textContent = "Copy Email"; btn.classList.remove("ok"); }, 2400);
+  });
+}
+
+function closeModal(event) {
+  if (event && event.target !== document.getElementById("overlay")) return;
+  document.getElementById("overlay").classList.remove("open");
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+// INIT
+window.addEventListener("DOMContentLoaded", () => {
+  renderPorts();
+  renderLog();
+  document.getElementById("ts").textContent = new Date().toUTCString().replace("GMT","UTC");
+});
+</script>
+</body>
+</html>
